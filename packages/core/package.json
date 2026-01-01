@@ -1,0 +1,41 @@
+{
+  "name": "@nlap/core",
+  "version": "0.1.0",
+  "description": "Core engine for Natural Language Action Parser",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@nlap/providers": "*",
+    "zod": "^3.22.4",
+    "zod-to-json-schema": "^3.22.4"
+  },
+  "peerDependencies": {
+    "@nlap/providers": "*",
+    "@nlap/routers": "*"
+  },
+  "peerDependenciesMeta": {
+    "@nlap/providers": {
+      "optional": true
+    },
+    "@nlap/routers": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.1.0"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "name": "@nlap/routers",
+  "version": "0.1.0",
+  "description": "Routing implementations for NLAP",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "natural": "^7.0.7",
+    "stopword": "^3.0.1"
+  },
+  "devDependencies": {
+    "@types/natural": "^5.1.5",
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.1.0"
+  }
+}
