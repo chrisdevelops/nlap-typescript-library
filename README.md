@@ -1,7 +1,7 @@
 # NLAP - Natural Language Action Parser
 
-**Status**: Phase 1 Complete ✅
-**Version**: 0.1.0
+**Status**: Phase 2 Complete ✅
+**Version**: 0.2.0
 
 Transform natural language input into validated, executable action plans with full TypeScript support.
 
@@ -17,9 +17,9 @@ npm install @nlap/core @nlap/providers @nlap/routers zod
 
 ```typescript
 import { z } from 'zod';
-import { createNLAPEngine, ActionRegistry } from '@nlap/core';
+import { createNLAPEngine, ActionRegistry, Interpreter } from '@nlap/core';
 import { ClaudeProvider } from '@nlap/providers';
-import { KeywordRouter } from '@nlap/routers';
+import { HybridRouter, KeywordRouter, EmbeddingRouter } from '@nlap/routers';
 
 // 1. Define your context
 interface AppContext extends BaseContext {
@@ -39,10 +39,13 @@ registry.register({
   tags: ['tasks', 'create'],
 });
 
-// 3. Create engine
+// 3. Create engine with HybridRouter (keyword + embedding)
 const engine = createNLAPEngine({
   registry,
-  router: new KeywordRouter(),
+  router: new HybridRouter(
+    new KeywordRouter(),
+    new EmbeddingRouter()
+  ),
   interpreter: new Interpreter(
     new ClaudeProvider({ apiKey: process.env.ANTHROPIC_API_KEY! })
   ),
@@ -78,23 +81,23 @@ NLAP uses a router-first architecture with the following pipeline stages:
 
 ## Core Features
 
-### ✅ Implemented (Phase 1)
+### ✅ Implemented (Phase 1 & 2)
 
 - **Type-Safe Action Registry** - Register actions with full TypeScript inference
 - **Circular Dependency Detection** - Validates action dependency graphs
 - **Tag-Based Filtering** - Organize actions by tags
-- **TF-IDF Routing** - Efficient keyword-based action selection
+- **TF-IDF Routing** - Efficient keyword-based action selection (KeywordRouter)
+- **Embedding Router** - Vector similarity routing using local embeddings
+- **Hybrid Router** - Intelligent fallback between keyword and embedding routing
 - **LLM Integration** - Claude (Anthropic) provider with tool calling
 - **Zod Schema Validation** - Runtime type checking
+- **Dynamic Schemas** - Context-aware validation (async schema factories)
 - **Auto-Repair Loop** - Automatically fix validation errors
 - **Clarification Requests** - Ask users for missing information
 - **Observability** - Trace events for debugging
 
-### ⏳ Coming in Phase 2
+### ⏳ Coming in Phase 3
 
-- **Embedding Router** - Vector similarity routing
-- **Hybrid Router** - Combine keyword + embedding
-- **Dynamic Schemas** - Context-aware validation
 - **DAG Executor** - Dependency-ordered execution
 - **Compensation/Rollback** - Transaction-like guarantees
 - **Multi-Turn Memory** - Conversation state management
@@ -264,8 +267,8 @@ MIT
 **Phase 1: Core Foundation** ✅ COMPLETE
 - Type system, Registry, Pipeline, Validator, Router, LLM integration
 
-**Phase 2: Advanced Routing** (Weeks 3-4)
-- Embedding router, Hybrid router, Enhanced repair
+**Phase 2: Advanced Routing** ✅ COMPLETE
+- EmbeddingRouter (vector similarity), HybridRouter (keyword + embedding fallback), Dynamic schemas
 
 **Phase 3: Execution & Memory** (Weeks 5-6)
 - DAG executor, Compensation, Multi-turn conversations
