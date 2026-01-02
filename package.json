@@ -1,8 +1,13 @@
 {
   "name": "nlap",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "private": true,
-  "description": "Natural Language Action Parser - Transform natural language into validated, executable action plans",
+  "description": "Natural Language Action Parser - Transform natural language into validated, executable actions",
+  "author": "Chris Lloyd",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chrisdevelops/nlap-typescript-library.git"
+  },
   "workspaces": [
     "packages/*"
   ],
