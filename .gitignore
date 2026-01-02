@@ -79,5 +79,6 @@ docs/.vitepress/dist/
 docs/.vitepress/cache/
 
 # AI Config
+CLAUDE.md
 .claude/
 .docs/
