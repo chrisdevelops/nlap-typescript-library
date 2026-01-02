@@ -1,6 +1,6 @@
 {
   "name": "nlap",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "description": "Natural Language Action Parser - Transform natural language into validated, executable actions",
   "author": "Chris Lloyd",
