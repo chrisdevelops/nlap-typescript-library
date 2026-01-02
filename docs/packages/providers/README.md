@@ -10,13 +10,26 @@ npm install @nlap/providers @nlap/core
 
 ## Available Providers
 
-- **[ClaudeProvider](./ClaudeProvider.md)** - Anthropic Claude (recommended)
+- **[ClaudeProvider](./ClaudeProvider.md)** - Anthropic Claude (cloud, recommended for production)
+- **[OllamaProvider](./OllamaProvider.md)** - Local open-source models (free, private)
 - **OpenAI** - Coming in Phase 4
 - **Gemini** - Coming in Phase 4
 
+## Provider Comparison
+
+| Feature | ClaudeProvider | OllamaProvider |
+|---------|----------------|----------------|
+| **Cost** | Paid per token | Free |
+| **Speed** | 1-3s | 2-10s (hardware dependent) |
+| **Accuracy** | Excellent | Good (model dependent) |
+| **Privacy** | Sends to API | 100% local |
+| **Internet** | Required | Not required |
+| **Setup** | API key | Install Ollama + models |
+| **Best For** | Production, critical accuracy | Development, privacy, cost-free |
+
 ## Quick Start
 
-### ClaudeProvider
+### ClaudeProvider (Cloud)
 
 ```typescript
 import { ClaudeProvider } from '@nlap/providers';
@@ -26,6 +39,21 @@ const provider = new ClaudeProvider({
   apiKey: process.env.ANTHROPIC_API_KEY!,
   model: 'claude-sonnet-4-5-20250929', // Optional
   maxTokens: 4096, // Optional
+});
+
+const interpreter = new Interpreter(provider);
+```
+
+### OllamaProvider (Local)
+
+```typescript
+import { OllamaProvider } from '@nlap/providers';
+import { Interpreter } from '@nlap/core';
+
+// First: ollama pull llama3.1:8b
+const provider = new OllamaProvider({
+  model: 'llama3.1:8b',
+  baseURL: 'http://localhost:11434', // Optional, default
 });
 
 const interpreter = new Interpreter(provider);
@@ -151,8 +179,37 @@ const engine = createNLAPEngine({
 });
 ```
 
+## Choosing a Provider
+
+**Use ClaudeProvider when:**
+- Building production applications
+- Need highest accuracy for tool calling
+- Have API budget
+- Internet connectivity available
+
+**Use OllamaProvider when:**
+- Developing locally without costs
+- Privacy/security requirements (data stays local)
+- Offline environment
+- Experimenting with different models
+
+**You can use both:**
+```typescript
+// Production
+const prodProvider = new ClaudeProvider({ apiKey: '...' });
+
+// Development
+const devProvider = new OllamaProvider({ model: 'llama3.1:8b' });
+
+const provider = process.env.NODE_ENV === 'production'
+  ? prodProvider
+  : devProvider;
+```
+
 ## Next Steps
 
-- Configure [ClaudeProvider](./ClaudeProvider.md)
+- Configure [ClaudeProvider](./ClaudeProvider.md) for cloud API
+- Configure [OllamaProvider](./OllamaProvider.md) for local models
 - Learn about [Interpreter](../core/Interpreter.md)
-- See [API Reference](https://docs.anthropic.com/claude/reference)
+- See [Claude API Reference](https://docs.anthropic.com/claude/reference)
+- See [Ollama Documentation](https://ollama.com/docs)
