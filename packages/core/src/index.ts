@@ -17,5 +17,13 @@ export type { InterpretRequest, InterpretResult } from './interpreter/Interprete
 // Pipeline
 export { Pipeline } from './pipeline/Pipeline.js';
 
+// Executor
+export { DAGExecutor } from './executor/DAGExecutor.js';
+export type { DAGExecutorConfig } from './executor/DAGExecutor.js';
+
+// Memory
+export { ThreeTierMemory } from './memory/ThreeTierMemory.js';
+export type { ThreeTierMemoryConfig } from './memory/ThreeTierMemory.js';
+
 // Factory
 export { createNLAPEngine } from './factory.js';

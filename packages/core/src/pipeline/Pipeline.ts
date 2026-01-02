@@ -1,4 +1,4 @@
-import type { PipelineConfig, PipelineResult, TraceEvent } from '../types/pipeline.js';
+import type { PipelineConfig, PipelineResult, TraceEvent, ExecutionResult } from '../types/pipeline.js';
 import type { BaseContext } from '../types/base.js';
 import type { Plan, NormalizedInput } from '../types/plans.js';
 import type { ActionCall } from '../types/actions.js';
@@ -91,29 +91,49 @@ export class Pipeline<TContext extends BaseContext = BaseContext> {
       const callsWithIds = this.assignCallIds(interpretResult.calls);
 
       // 4. VALIDATE
+      let plan: Plan;
       if (this.config.validator) {
         this.recordEvent(span, trace, { stage: 'validate', status: 'start' });
-        const validPlan = await this.validateWithRepair(
+        plan = await this.validateWithRepair(
           this.createPlan(cid, normalized, callsWithIds),
           context,
           trace,
           span
         );
         this.recordEvent(span, trace, { stage: 'validate', status: 'complete' });
-
-        // Update memory
-        this.updateMemory(cid, input, validPlan);
-
-        this.config.telemetry?.endSpan(span, 'success');
-        return this.createResult(validPlan, undefined, trace, startTime);
+      } else {
+        // No validator - just create the plan
+        plan = this.createPlan(cid, normalized, callsWithIds);
       }
 
-      // No validator - just return the plan
-      const plan = this.createPlan(cid, normalized, callsWithIds);
+      // 5. EXECUTE (if executor configured and plan has calls)
+      let execution: ExecutionResult<TContext> | undefined;
+      if (this.config.executor && plan.calls.length > 0 && !plan.clarification) {
+        this.recordEvent(span, trace, { stage: 'execute', status: 'start' });
+        try {
+          execution = await this.config.executor.execute(plan, context);
+          this.recordEvent(span, trace, {
+            stage: 'execute',
+            status: 'complete',
+            data: { succeeded: execution.succeeded, failed: execution.failed },
+          });
+        } catch (error) {
+          this.recordEvent(span, trace, {
+            stage: 'execute',
+            status: 'failed',
+            error: error as Error,
+          });
+          // Update memory and rethrow
+          this.updateMemory(cid, input, plan);
+          throw error;
+        }
+      }
+
+      // Update memory
       this.updateMemory(cid, input, plan);
 
       this.config.telemetry?.endSpan(span, 'success');
-      return this.createResult(plan, undefined, trace, startTime);
+      return this.createResult(plan, execution, trace, startTime);
     } catch (error) {
       this.recordEvent(span, trace, {
         stage: 'error',
@@ -245,6 +265,13 @@ export class Pipeline<TContext extends BaseContext = BaseContext> {
       this.config.memory.addMessage(conversationId, {
         role: 'assistant',
         content: plan.clarification.question,
+      });
+    } else if (plan.calls.length > 0) {
+      // Add assistant message summarizing the planned actions
+      const actionSummary = plan.calls.map((c) => c.actionId).join(', ');
+      this.config.memory.addMessage(conversationId, {
+        role: 'assistant',
+        content: `Executing actions: ${actionSummary}`,
       });
     }
   }

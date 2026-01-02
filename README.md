@@ -1,7 +1,7 @@
 # NLAP - Natural Language Action Parser
 
-**Status**: Phase 2 Complete ✅
-**Version**: 0.2.0
+**Status**: Phase 3 Complete ✅
+**Version**: 0.3.0
 
 Transform natural language input into validated, executable action plans with full TypeScript support.
 
@@ -17,16 +17,17 @@ npm install @nlap/core @nlap/providers @nlap/routers zod
 
 ```typescript
 import { z } from 'zod';
-import { createNLAPEngine, ActionRegistry, Interpreter } from '@nlap/core';
+import { createNLAPEngine, ActionRegistry, Interpreter, DAGExecutor, ThreeTierMemory } from '@nlap/core';
 import { ClaudeProvider } from '@nlap/providers';
 import { HybridRouter, KeywordRouter, EmbeddingRouter } from '@nlap/routers';
 
 // 1. Define your context
 interface AppContext extends BaseContext {
+  db: Database;
   userId: string;
 }
 
-// 2. Create registry and register actions
+// 2. Create registry and register actions with handlers
 const registry = new ActionRegistry<AppContext>();
 
 registry.register({
@@ -36,10 +37,14 @@ registry.register({
     title: z.string().describe('Task title'),
     dueDate: z.string().datetime().optional().describe('ISO 8601 due date'),
   }),
+  handler: async (args, ctx) => {
+    // Execute the action
+    return await ctx.appContext.db.tasks.create(args);
+  },
   tags: ['tasks', 'create'],
 });
 
-// 3. Create engine with HybridRouter (keyword + embedding)
+// 3. Create engine with execution and memory
 const engine = createNLAPEngine({
   registry,
   router: new HybridRouter(
@@ -49,12 +54,14 @@ const engine = createNLAPEngine({
   interpreter: new Interpreter(
     new ClaudeProvider({ apiKey: process.env.ANTHROPIC_API_KEY! })
   ),
+  executor: new DAGExecutor(registry), // Enable execution
+  memory: new ThreeTierMemory(),        // Enable multi-turn conversations
 });
 
-// 4. Process natural language
+// 4. Process natural language and execute
 const result = await engine.interpret(
   "Create a task to review budget by Friday",
-  { requestId: '123', userId: 'user_456' }
+  { requestId: '123', db: myDb, userId: 'user_456' }
 );
 
 console.log(result.plan.calls);
@@ -62,6 +69,13 @@ console.log(result.plan.calls);
 //   actionId: 'tasks.create',
 //   args: { title: 'Review budget', dueDate: '2025-01-03T17:00:00Z' }
 // }]
+
+console.log(result.execution);
+// {
+//   succeeded: 1,
+//   failed: 0,
+//   results: Map { 'call_...' => { result: { id: 'task_123', ... } } }
+// }
 ```
 
 ## Architecture
@@ -75,13 +89,13 @@ NLAP uses a router-first architecture with the following pipeline stages:
 | **Interpret** | Extract intents via LLM | 500-2000ms | ✅ |
 | **Validate** | Check against Zod schemas | <50ms | ✅ |
 | **Repair** | Auto-fix validation errors | 500-2000ms | ✅ |
-| **Execute** | Run action handlers | Variable | ⏳ Phase 2 |
+| **Execute** | Run action handlers | Variable | ✅ |
 
 **Total Latency**: 1-3s (simple), 3-8s (complex with repair)
 
 ## Core Features
 
-### ✅ Implemented (Phase 1 & 2)
+### ✅ Implemented (Phase 1, 2 & 3)
 
 - **Type-Safe Action Registry** - Register actions with full TypeScript inference
 - **Circular Dependency Detection** - Validates action dependency graphs
@@ -94,14 +108,17 @@ NLAP uses a router-first architecture with the following pipeline stages:
 - **Dynamic Schemas** - Context-aware validation (async schema factories)
 - **Auto-Repair Loop** - Automatically fix validation errors
 - **Clarification Requests** - Ask users for missing information
+- **DAG Executor** - Topological sort with parallel execution
+- **Retry Logic** - Configurable retry with exponential/linear backoff
+- **Compensation/Rollback** - Transaction-like guarantees with compensation handlers
+- **Multi-Turn Memory** - Three-tier conversation state management
 - **Observability** - Trace events for debugging
 
-### ⏳ Coming in Phase 3
+### ⏳ Coming in Phase 4
 
-- **DAG Executor** - Dependency-ordered execution
-- **Compensation/Rollback** - Transaction-like guarantees
-- **Multi-Turn Memory** - Conversation state management
 - **RAG Retrieval** - Entity resolution for large catalogs
+- **Additional Providers** - OpenAI, Gemini support
+- **Performance Optimization** - Caching, streaming
 
 ## Packages
 
@@ -270,8 +287,8 @@ MIT
 **Phase 2: Advanced Routing** ✅ COMPLETE
 - EmbeddingRouter (vector similarity), HybridRouter (keyword + embedding fallback), Dynamic schemas
 
-**Phase 3: Execution & Memory** (Weeks 5-6)
-- DAG executor, Compensation, Multi-turn conversations
+**Phase 3: Execution & Memory** ✅ COMPLETE
+- DAGExecutor (topological sort, parallel execution), Retry & compensation, ThreeTierMemory (multi-turn conversations)
 
 **Phase 4: Retrieval & Polish** (Weeks 7-8)
 - RAG integration, Additional providers, Documentation
