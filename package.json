@@ -1,35 +1,60 @@
 {
   "name": "nlap",
-  "version": "0.4.0",
-  "private": true,
-  "description": "Natural Language Action Parser - Transform natural language into validated, executable actions",
+  "version": "1.1.0",
+  "description": "Natural Language Action Parser - Simple, type-safe natural language to action conversion",
   "author": "Chris Lloyd",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/chrisdevelops/nlap-typescript-library.git"
   },
-  "workspaces": [
-    "packages/*"
+  "keywords": [
+    "nlp",
+    "natural-language",
+    "action-parser",
+    "llm",
+    "ai",
+    "typescript",
+    "openai",
+    "ollama"
   ],
   "scripts": {
-    "build": "npm run build --workspaces",
-    "test": "vitest",
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "test:coverage": "vitest --coverage",
-    "test:watch": "vitest --watch",
-    "typecheck": "tsc --noEmit --project tsconfig.base.json",
-    "lint": "eslint packages --ext .ts",
-    "clean": "rm -rf packages/*/dist"
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "natural": "^7.0.7",
+    "openai": "^4.0.0",
+    "stopword": "^3.0.1",
+    "zod": "^3.22.4",
+    "zod-to-json-schema": "^3.22.4"
   },
   "devDependencies": {
+    "@types/natural": "^5.1.5",
     "@types/node": "^20.10.0",
-    "@typescript-eslint/eslint-plugin": "^6.15.0",
-    "@typescript-eslint/parser": "^6.15.0",
     "@vitest/coverage-v8": "^1.1.0",
-    "eslint": "^8.56.0",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3",
-    "vitest": "^1.1.0",
-    "zod": "^3.22.4"
+    "vitest": "^1.1.0"
   },
   "engines": {
     "node": ">=18.0.0"
