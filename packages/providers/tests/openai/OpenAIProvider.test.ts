@@ -110,7 +110,7 @@ describe('OpenAIProvider', () => {
                   id: 'call_123',
                   type: 'function',
                   function: {
-                    name: 'tasks.create',
+                    name: 'tasks_create', // Sanitized name returned by OpenAI
                     arguments: '{"title":"Review the budget"}',
                   },
                 },
@@ -131,7 +131,7 @@ describe('OpenAIProvider', () => {
       expect(result.toolCalls).toHaveLength(1);
       expect(result.toolCalls?.[0]).toEqual({
         id: 'call_123',
-        name: 'tasks.create',
+        name: 'tasks.create', // Restored to original
         arguments: { title: 'Review the budget' },
       });
       expect(result.usage).toEqual({
@@ -155,7 +155,7 @@ describe('OpenAIProvider', () => {
                   id: 'call_456',
                   type: 'function',
                   function: {
-                    name: 'tasks.create',
+                    name: 'tasks_create', // Sanitized name returned by OpenAI
                     arguments: '{"title":"Review the budget"}',
                   },
                 },
@@ -209,7 +209,7 @@ describe('OpenAIProvider', () => {
           {
             type: 'function',
             function: {
-              name: 'tasks.create',
+              name: 'tasks_create', // Sanitized name sent to OpenAI
               description: 'Create a new task',
               parameters: expect.any(Object),
             },
@@ -314,7 +314,7 @@ describe('OpenAIProvider', () => {
                   id: 'call_1',
                   type: 'function',
                   function: {
-                    name: 'tasks.create',
+                    name: 'tasks_create', // Sanitized name returned by OpenAI
                     arguments: '{"title":"Task 1"}',
                   },
                 },
@@ -322,7 +322,7 @@ describe('OpenAIProvider', () => {
                   id: 'call_2',
                   type: 'function',
                   function: {
-                    name: 'tasks.create',
+                    name: 'tasks_create', // Sanitized name returned by OpenAI
                     arguments: '{"title":"Task 2"}',
                   },
                 },
@@ -337,8 +337,8 @@ describe('OpenAIProvider', () => {
       const result = await provider.generateWithTools(messages, tools);
 
       expect(result.toolCalls).toHaveLength(2);
-      expect(result.toolCalls?.[0].name).toBe('tasks.create');
-      expect(result.toolCalls?.[1].name).toBe('tasks.create');
+      expect(result.toolCalls?.[0].name).toBe('tasks.create'); // Restored to original
+      expect(result.toolCalls?.[1].name).toBe('tasks.create'); // Restored to original
     });
 
     it('should handle tools array being empty', async () => {
@@ -362,6 +362,464 @@ describe('OpenAIProvider', () => {
           tools: undefined,
         })
       );
+    });
+  });
+
+  describe('Action ID Sanitization', () => {
+    describe('Basic Sanitization', () => {
+      it('should replace dots with underscores', async () => {
+        const provider = new OpenAIProvider({ apiKey: 'test-key' });
+        const tools: LLMTool[] = [
+          {
+            name: 'tasks.create',
+            description: 'Create a task',
+            input_schema: { type: 'object', properties: {} },
+          },
+        ];
+
+        mockCreate.mockResolvedValueOnce({
+          choices: [
+            {
+              message: {
+                role: 'assistant',
+                content: null,
+                tool_calls: [
+                  {
+                    id: 'call_123',
+                    type: 'function',
+                    function: {
+                      name: 'tasks_create', // Sanitized name from OpenAI
+                      arguments: '{"title":"Test"}',
+                    },
+                  },
+                ],
+              },
+              finish_reason: 'tool_calls',
+            },
+          ],
+          usage: { prompt_tokens: 100, completion_tokens: 20 },
+        });
+
+        const result = await provider.generateWithTools(
+          [{ role: 'user', content: 'Create a task' }],
+          tools
+        );
+
+        // Verify API was called with sanitized name
+        expect(mockCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            tools: [
+              {
+                type: 'function',
+                function: expect.objectContaining({
+                  name: 'tasks_create', // Sanitized
+                }),
+              },
+            ],
+          })
+        );
+
+        // Verify response has original name restored
+        expect(result.toolCalls?.[0].name).toBe('tasks.create'); // Restored
+      });
+
+      it('should handle nested namespaces', async () => {
+        const provider = new OpenAIProvider({ apiKey: 'test-key' });
+        const tools: LLMTool[] = [
+          {
+            name: 'api.users.profile.update',
+            description: 'Update user profile',
+            input_schema: { type: 'object', properties: {} },
+          },
+        ];
+
+        mockCreate.mockResolvedValueOnce({
+          choices: [
+            {
+              message: {
+                role: 'assistant',
+                content: null,
+                tool_calls: [
+                  {
+                    id: 'call_456',
+                    type: 'function',
+                    function: {
+                      name: 'api_users_profile_update',
+                      arguments: '{"userId":"123"}',
+                    },
+                  },
+                ],
+              },
+              finish_reason: 'tool_calls',
+            },
+          ],
+          usage: { prompt_tokens: 100, completion_tokens: 20 },
+        });
+
+        const result = await provider.generateWithTools(
+          [{ role: 'user', content: 'Update profile' }],
+          tools
+        );
+
+        expect(result.toolCalls?.[0].name).toBe('api.users.profile.update');
+      });
+
+      it('should handle action IDs with hyphens (already valid)', async () => {
+        const provider = new OpenAIProvider({ apiKey: 'test-key' });
+        const tools: LLMTool[] = [
+          {
+            name: 'create-task',
+            description: 'Create a task',
+            input_schema: { type: 'object', properties: {} },
+          },
+        ];
+
+        mockCreate.mockResolvedValueOnce({
+          choices: [
+            {
+              message: {
+                role: 'assistant',
+                content: null,
+                tool_calls: [
+                  {
+                    id: 'call_789',
+                    type: 'function',
+                    function: {
+                      name: 'create-task', // Unchanged
+                      arguments: '{"title":"Test"}',
+                    },
+                  },
+                ],
+              },
+              finish_reason: 'tool_calls',
+            },
+          ],
+          usage: { prompt_tokens: 100, completion_tokens: 20 },
+        });
+
+        const result = await provider.generateWithTools(
+          [{ role: 'user', content: 'Create task' }],
+          tools
+        );
+
+        expect(result.toolCalls?.[0].name).toBe('create-task');
+      });
+
+      it('should handle multiple consecutive dots', async () => {
+        const provider = new OpenAIProvider({ apiKey: 'test-key' });
+        const tools: LLMTool[] = [
+          {
+            name: 'tasks..create',
+            description: 'Create a task',
+            input_schema: { type: 'object', properties: {} },
+          },
+        ];
+
+        mockCreate.mockResolvedValueOnce({
+          choices: [
+            {
+              message: {
+                role: 'assistant',
+                content: null,
+                tool_calls: [
+                  {
+                    id: 'call_abc',
+                    type: 'function',
+                    function: {
+                      name: 'tasks_create', // Collapsed to single underscore
+                      arguments: '{"title":"Test"}',
+                    },
+                  },
+                ],
+              },
+              finish_reason: 'tool_calls',
+            },
+          ],
+          usage: { prompt_tokens: 100, completion_tokens: 20 },
+        });
+
+        const result = await provider.generateWithTools(
+          [{ role: 'user', content: 'Create task' }],
+          tools
+        );
+
+        expect(result.toolCalls?.[0].name).toBe('tasks..create');
+      });
+
+      it('should handle unicode characters', async () => {
+        const provider = new OpenAIProvider({ apiKey: 'test-key' });
+        const tools: LLMTool[] = [
+          {
+            name: 'tâsks.créate',
+            description: 'Create a task',
+            input_schema: { type: 'object', properties: {} },
+          },
+        ];
+
+        mockCreate.mockResolvedValueOnce({
+          choices: [
+            {
+              message: {
+                role: 'assistant',
+                content: null,
+                tool_calls: [
+                  {
+                    id: 'call_def',
+                    type: 'function',
+                    function: {
+                      name: 't_sks_cr_ate', // Unicode chars replaced
+                      arguments: '{"title":"Test"}',
+                    },
+                  },
+                ],
+              },
+              finish_reason: 'tool_calls',
+            },
+          ],
+          usage: { prompt_tokens: 100, completion_tokens: 20 },
+        });
+
+        const result = await provider.generateWithTools(
+          [{ role: 'user', content: 'Create task' }],
+          tools
+        );
+
+        expect(result.toolCalls?.[0].name).toBe('tâsks.créate');
+      });
+
+      it('should prefix with underscore if starts with number', async () => {
+        const provider = new OpenAIProvider({ apiKey: 'test-key' });
+        const tools: LLMTool[] = [
+          {
+            name: '2fa.enable',
+            description: 'Enable 2FA',
+            input_schema: { type: 'object', properties: {} },
+          },
+        ];
+
+        mockCreate.mockResolvedValueOnce({
+          choices: [
+            {
+              message: {
+                role: 'assistant',
+                content: null,
+                tool_calls: [
+                  {
+                    id: 'call_2fa',
+                    type: 'function',
+                    function: {
+                      name: '_2fa_enable', // Prefixed with underscore
+                      arguments: '{}',
+                    },
+                  },
+                ],
+              },
+              finish_reason: 'tool_calls',
+            },
+          ],
+          usage: { prompt_tokens: 100, completion_tokens: 20 },
+        });
+
+        const result = await provider.generateWithTools(
+          [{ role: 'user', content: 'Enable 2FA' }],
+          tools
+        );
+
+        expect(result.toolCalls?.[0].name).toBe('2fa.enable');
+      });
+    });
+
+    describe('Collision Detection', () => {
+      it('should throw error when two action IDs sanitize to same name', async () => {
+        const provider = new OpenAIProvider({ apiKey: 'test-key' });
+        const tools: LLMTool[] = [
+          {
+            name: 'tasks.create',
+            description: 'Create via dots',
+            input_schema: { type: 'object', properties: {} },
+          },
+          {
+            name: 'tasks_create',
+            description: 'Create via underscore',
+            input_schema: { type: 'object', properties: {} },
+          },
+        ];
+
+        await expect(
+          provider.generateWithTools([{ role: 'user', content: 'Create task' }], tools)
+        ).rejects.toThrow(/collision detected.*tasks.create.*tasks_create/i);
+      });
+
+      it('should throw error for complex collision case', async () => {
+        const provider = new OpenAIProvider({ apiKey: 'test-key' });
+        const tools: LLMTool[] = [
+          {
+            name: 'user.profile.get',
+            description: 'Get profile (dots)',
+            input_schema: { type: 'object', properties: {} },
+          },
+          {
+            name: 'user_profile.get',
+            description: 'Get profile (mixed)',
+            input_schema: { type: 'object', properties: {} },
+          },
+        ];
+
+        await expect(
+          provider.generateWithTools([{ role: 'user', content: 'Get profile' }], tools)
+        ).rejects.toThrow(/collision detected/i);
+      });
+
+      it('should provide helpful error message for collisions', async () => {
+        const provider = new OpenAIProvider({ apiKey: 'test-key' });
+        const tools: LLMTool[] = [
+          { name: 'a.b', description: 'Action 1', input_schema: {} },
+          { name: 'a_b', description: 'Action 2', input_schema: {} },
+        ];
+
+        try {
+          await provider.generateWithTools([{ role: 'user', content: 'Test' }], tools);
+          expect.fail('Should have thrown error');
+        } catch (error: any) {
+          expect(error.message).toContain('collision detected');
+          expect(error.message).toContain('a.b');
+          expect(error.message).toContain('a_b');
+          expect(error.message).toContain('rename');
+        }
+      });
+    });
+
+    describe('Multiple Tool Calls with Sanitization', () => {
+      it('should handle multiple different action IDs correctly', async () => {
+        const provider = new OpenAIProvider({ apiKey: 'test-key' });
+        const tools: LLMTool[] = [
+          {
+            name: 'tasks.create',
+            description: 'Create task',
+            input_schema: { type: 'object', properties: {} },
+          },
+          {
+            name: 'users.invite',
+            description: 'Invite user',
+            input_schema: { type: 'object', properties: {} },
+          },
+        ];
+
+        mockCreate.mockResolvedValueOnce({
+          choices: [
+            {
+              message: {
+                role: 'assistant',
+                content: null,
+                tool_calls: [
+                  {
+                    id: 'call_1',
+                    type: 'function',
+                    function: {
+                      name: 'tasks_create',
+                      arguments: '{"title":"Task 1"}',
+                    },
+                  },
+                  {
+                    id: 'call_2',
+                    type: 'function',
+                    function: {
+                      name: 'users_invite',
+                      arguments: '{"email":"test@example.com"}',
+                    },
+                  },
+                ],
+              },
+              finish_reason: 'tool_calls',
+            },
+          ],
+          usage: { prompt_tokens: 150, completion_tokens: 40 },
+        });
+
+        const result = await provider.generateWithTools(
+          [{ role: 'user', content: 'Create task and invite user' }],
+          tools
+        );
+
+        expect(result.toolCalls).toHaveLength(2);
+        expect(result.toolCalls?.[0].name).toBe('tasks.create');
+        expect(result.toolCalls?.[1].name).toBe('users.invite');
+      });
+    });
+
+    describe('Edge Cases', () => {
+      it('should throw error for empty action ID', async () => {
+        const provider = new OpenAIProvider({ apiKey: 'test-key' });
+        const tools: LLMTool[] = [
+          {
+            name: '',
+            description: 'Empty name',
+            input_schema: { type: 'object', properties: {} },
+          },
+        ];
+
+        await expect(
+          provider.generateWithTools([{ role: 'user', content: 'Test' }], tools)
+        ).rejects.toThrow(/Action ID cannot be empty/i);
+      });
+
+      it('should throw error for action ID that sanitizes to empty', async () => {
+        const provider = new OpenAIProvider({ apiKey: 'test-key' });
+        const tools: LLMTool[] = [
+          {
+            name: '...',
+            description: 'Only dots',
+            input_schema: { type: 'object', properties: {} },
+          },
+        ];
+
+        await expect(
+          provider.generateWithTools([{ role: 'user', content: 'Test' }], tools)
+        ).rejects.toThrow(/sanitizes to empty string/i);
+      });
+    });
+
+    describe('Backward Compatibility', () => {
+      it('should not affect action IDs without dots or special chars', async () => {
+        const provider = new OpenAIProvider({ apiKey: 'test-key' });
+        const tools: LLMTool[] = [
+          {
+            name: 'createTask',
+            description: 'Create task',
+            input_schema: { type: 'object', properties: {} },
+          },
+        ];
+
+        mockCreate.mockResolvedValueOnce({
+          choices: [
+            {
+              message: {
+                role: 'assistant',
+                content: null,
+                tool_calls: [
+                  {
+                    id: 'call_xyz',
+                    type: 'function',
+                    function: {
+                      name: 'createTask', // Unchanged
+                      arguments: '{"title":"Test"}',
+                    },
+                  },
+                ],
+              },
+              finish_reason: 'tool_calls',
+            },
+          ],
+          usage: { prompt_tokens: 100, completion_tokens: 20 },
+        });
+
+        const result = await provider.generateWithTools(
+          [{ role: 'user', content: 'Create task' }],
+          tools
+        );
+
+        expect(result.toolCalls?.[0].name).toBe('createTask');
+      });
     });
   });
 });
