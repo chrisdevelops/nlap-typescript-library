@@ -1,7 +1,7 @@
 {
   "name": "@nlap/providers",
   "version": "0.4.0",
-  "description": "LLM provider adapters for NLAP - ClaudeProvider for Anthropic's Claude models",
+  "description": "LLM provider adapters for NLAP - Claude, OpenAI, and Ollama providers",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "type": "module",
@@ -27,6 +27,8 @@
     "nlap",
     "llm",
     "claude",
+    "openai",
+    "ollama",
     "anthropic",
     "ai",
     "provider",
@@ -48,7 +50,8 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.30.1"
+    "@anthropic-ai/sdk": "^0.30.1",
+    "openai": "^6.15.0"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
