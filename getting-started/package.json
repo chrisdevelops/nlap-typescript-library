@@ -1,0 +1,30 @@
+{
+  "name": "nlap-getting-started",
+  "version": "1.0.0",
+  "description": "Getting started examples for NLAP library",
+  "type": "module",
+  "scripts": {
+    "minimal": "tsx minimal-example.ts",
+    "simple": "tsx simple-task-example.ts",
+    "complete": "tsx complete-example/index.ts"
+  },
+  "keywords": [
+    "nlap",
+    "getting-started",
+    "examples"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@nlap/core": "^0.3.0",
+    "@nlap/providers": "^0.5.1",
+    "@nlap/routers": "^0.3.0",
+    "dotenv": "^16.4.5",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}
